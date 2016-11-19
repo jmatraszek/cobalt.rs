@@ -129,41 +129,47 @@ pub fn build(config: &Config) -> Result<()> {
 
     trace!("Generating posts");
     {
-        let mut previous_post: Option<&Document> = None;
-        let mut iter = posts.iter_mut().peekable();
-        while let Some(mut post) = iter.next() {
+        for (current, mut post) in posts.iter_mut().enumerate() {
             trace!("Generating {}", post.path);
 
             let mut context = post.get_render_context(&simple_posts_data);
 
             let mut post_value = HashMap::new();
-            if let Some(previous_post) = previous_post {
-                let mut previous = HashMap::new();
-                previous.insert("url".to_owned(), Value::Str(previous_post.path.to_owned()));
-                if let Some(title) = previous_post.attributes.get("title") {
-                    previous.insert("title".to_owned(), title.to_owned());
+            if current > 0 {
+                if let Some(previous_post) = simple_posts_data.get(current - 1) {
+                    if let &Value::Object(ref previous_post) = previous_post {
+                        let mut previous = HashMap::new();
+                        if let Some(path) = previous_post.get("path") {
+                            previous.insert("url".to_owned(), path.to_owned());
+                        }
+                        if let Some(title) = previous_post.get("title") {
+                            previous.insert("title".to_owned(), title.to_owned());
+                        }
+                        // posts are sorted in reverse chronological order, so the previously processed one is in
+                        // fact the next one chronologically
+                        post_value.insert("next".to_owned(), Value::Object(previous));
+                    }
                 }
-                // posts are sorted in reverse chronological order, so the previously processed one is in
-                // fact the next one chronologically
-                post_value.insert("next".to_owned(), Value::Object(previous));
             }
-            if let Some(next_post) = iter.peek() {
-                let mut next = HashMap::new();
-                next.insert("url".to_owned(), Value::Str(next_post.path.to_owned()));
-                if let Some(title) = next_post.attributes.get("title") {
-                    next.insert("title".to_owned(), title.to_owned());
+            if let Some(next_post) = simple_posts_data.get(current + 1) {
+                if let &Value::Object(ref next_post) = next_post {
+                    let mut next = HashMap::new();
+                    if let Some(path) = next_post.get("path") {
+                        next.insert("url".to_owned(), path.to_owned());
+                    }
+                    if let Some(title) = next_post.get("title") {
+                        next.insert("title".to_owned(), title.to_owned());
+                    }
+                    // posts are sorted in reverse chronological order, so the next processed one is in
+                    // fact the previous one chronologically
+                    post_value.insert("previous".to_owned(), Value::Object(next));
                 }
-                // posts are sorted in reverse chronological order, so the next processed one is in
-                // fact the previous one chronologically
-                post_value.insert("previous".to_owned(), Value::Object(next));
             }
             context.set_val("post", Value::Object(post_value));
 
             try!(post.render_excerpt(&mut context, &source, &config.excerpt_separator));
             let post_html = try!(post.render(&mut context, &source, &layouts, &mut layouts_cache));
             try!(create_document_file(&post_html, &post.path, dest));
-
-            previous_post = Some(post);
         }
     }
 
