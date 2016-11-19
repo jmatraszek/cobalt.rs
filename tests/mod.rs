@@ -185,3 +185,8 @@ pub fn yaml_error() {
 pub fn excerpts() {
     run_test("excerpts").unwrap();
 }
+
+#[test]
+pub fn prev_next_post_links() {
+    run_test("prev_next_post_links").expect("Build error");
+}

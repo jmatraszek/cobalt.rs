@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My blog - {{ title }}</title>
+    </head>
+    <body>
+        {{ content }}
+    {% if post.previous.url %}
+        <a href="{{post.previous.url}}">{{ post.previous.title }}</a>
+    {% endif %}
+    {% if post.next.url %}
+        <a href="{{post.next.url}}">{{ post.next.title }}</a>
+    {% endif %}
+    </body>
+</html>
+
