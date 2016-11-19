@@ -130,7 +130,7 @@ pub fn build(config: &Config) -> Result<()> {
     trace!("Generating posts");
     {
         let mut previous_post: Option<&Document> = None;
-        let mut iter = posts.iter().peekable();
+        let mut iter = posts.iter_mut().peekable();
         while let Some(mut post) = iter.next() {
             trace!("Generating {}", post.path);
 
