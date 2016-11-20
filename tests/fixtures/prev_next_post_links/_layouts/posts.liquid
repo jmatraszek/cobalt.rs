@@ -5,11 +5,11 @@
     </head>
     <body>
         {{ content }}
-    {% if post.previous.url %}
-        <a href="{{post.previous.url}}">{{ post.previous.title }}</a>
+    {% if page.previous.url %}
+        <a href="{{page.previous.url}}">{{ page.previous.title }}</a>
     {% endif %}
-    {% if post.next.url %}
-        <a href="{{post.next.url}}">{{ post.next.title }}</a>
+    {% if page.next.url %}
+        <a href="{{page.next.url}}">{{ page.next.title }}</a>
     {% endif %}
     </body>
 </html>

@@ -115,7 +115,7 @@ pub fn build(config: &Config) -> Result<()> {
     // January 1, 1970 0:00:00 UTC, the beginning of time
     let default_date = UTC.timestamp(0, 0).with_timezone(&FixedOffset::east(0));
 
-    let (mut posts, documents): (Vec<Document>, Vec<Document>) = documents.into_iter()
+    let (mut posts, mut documents): (Vec<Document>, Vec<Document>) = documents.into_iter()
         .partition(|x| x.is_post);
 
     // sort documents by date, if there's no date (none was provided or it couldn't be read) then
@@ -129,43 +129,10 @@ pub fn build(config: &Config) -> Result<()> {
 
     trace!("Generating posts");
     {
-        for (current, mut post) in posts.iter_mut().enumerate() {
+        for (current_post_idx, mut post) in posts.iter_mut().enumerate() {
             trace!("Generating {}", post.path);
 
-            let mut context = post.get_render_context(&simple_posts_data);
-
-            let mut post_value = HashMap::new();
-            if current > 0 {
-                if let Some(previous_post) = simple_posts_data.get(current - 1) {
-                    if let &Value::Object(ref previous_post) = previous_post {
-                        let mut previous = HashMap::new();
-                        if let Some(path) = previous_post.get("path") {
-                            previous.insert("url".to_owned(), path.to_owned());
-                        }
-                        if let Some(title) = previous_post.get("title") {
-                            previous.insert("title".to_owned(), title.to_owned());
-                        }
-                        // posts are sorted in reverse chronological order, so the previously processed one is in
-                        // fact the next one chronologically
-                        post_value.insert("next".to_owned(), Value::Object(previous));
-                    }
-                }
-            }
-            if let Some(next_post) = simple_posts_data.get(current + 1) {
-                if let &Value::Object(ref next_post) = next_post {
-                    let mut next = HashMap::new();
-                    if let Some(path) = next_post.get("path") {
-                        next.insert("url".to_owned(), path.to_owned());
-                    }
-                    if let Some(title) = next_post.get("title") {
-                        next.insert("title".to_owned(), title.to_owned());
-                    }
-                    // posts are sorted in reverse chronological order, so the next processed one is in
-                    // fact the previous one chronologically
-                    post_value.insert("previous".to_owned(), Value::Object(next));
-                }
-            }
-            context.set_val("post", Value::Object(post_value));
+            let mut context = post.get_render_context(&simple_posts_data, current_post_idx);
 
             try!(post.render_excerpt(&mut context, &source, &config.excerpt_separator));
             let post_html = try!(post.render(&mut context, &source, &layouts, &mut layouts_cache));
@@ -185,10 +152,10 @@ pub fn build(config: &Config) -> Result<()> {
         .collect();
 
     trace!("Generating other documents");
-    for mut doc in documents {
+    for (current_doc_idx, mut doc) in documents.iter_mut().enumerate() {
         trace!("Generating {}", doc.path);
 
-        let mut context = doc.get_render_context(&posts_data);
+        let mut context = doc.get_render_context(&posts_data, current_doc_idx);
         let doc_html = try!(doc.render(&mut context, &source, &layouts, &mut layouts_cache));
         try!(create_document_file(&doc_html, &doc.path, dest));
     }

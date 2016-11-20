@@ -245,8 +245,41 @@ impl Document {
     }
 
     /// Prepares liquid context for further rendering.
-    pub fn get_render_context(&self, posts: &[Value]) -> Context {
+    pub fn get_render_context(&self, posts: &[Value], current_idx: usize) -> Context {
         let mut context = Context::with_values(self.attributes.clone());
+
+        let mut page_attr = HashMap::new();
+        if current_idx > 0 {
+            if let Some(previous_post) = posts.get(current_idx - 1) {
+                if let &Value::Object(ref previous_post) = previous_post {
+                    let mut previous = HashMap::new();
+                    if let Some(path) = previous_post.get("path") {
+                        previous.insert("url".to_owned(), path.to_owned());
+                    }
+                    if let Some(title) = previous_post.get("title") {
+                        previous.insert("title".to_owned(), title.to_owned());
+                    }
+                    // posts are sorted in reverse chronological order, so the previously processed one is in
+                    // fact the next one chronologically
+                    page_attr.insert("next".to_owned(), Value::Object(previous));
+                }
+            }
+        }
+        if let Some(next_post) = posts.get(current_idx + 1) {
+            if let &Value::Object(ref next_post) = next_post {
+                let mut next = HashMap::new();
+                if let Some(path) = next_post.get("path") {
+                    next.insert("url".to_owned(), path.to_owned());
+                }
+                if let Some(title) = next_post.get("title") {
+                    next.insert("title".to_owned(), title.to_owned());
+                }
+                // posts are sorted in reverse chronological order, so the next processed one is in
+                // fact the previous one chronologically
+                page_attr.insert("previous".to_owned(), Value::Object(next));
+            }
+        }
+        context.set_val("page", Value::Object(page_attr));
         context.set_val("posts", Value::Array(posts.to_vec()));
         context
     }
